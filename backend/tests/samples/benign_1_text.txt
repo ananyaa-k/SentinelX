@@ -1,0 +1,4 @@
+
+This is a safe text file. 
+It contains normal sentences and words.
+No threats here.

@@ -1,0 +1,5 @@
+
+VirtualAlloc
+CreateRemoteThread
+WriteProcessMemory
+GetGetAsyncKeyState

@@ -1,0 +1,235 @@
+{
+  "scan_tests": [
+    {
+      "file": "malicious_1_eicar.txt",
+      "expected": "MALICIOUS",
+      "success": true,
+      "data": {
+        "id": "a1dfd923-c0d2-4c8f-8a6f-9eaafa80be13",
+        "filename": "malicious_1_eicar.txt",
+        "filesize": 68,
+        "filetype": "application/octet-stream",
+        "status": "MALICIOUS",
+        "confidence": 100,
+        "detected_rules": [
+          "eicar"
+        ],
+        "ai_insight": "Detected by YARA rules: eicar",
+        "timestamp": "2026-01-19T15:10:16.162211Z"
+      }
+    },
+    {
+      "file": "malicious_2_script.js",
+      "expected": "MALICIOUS",
+      "success": true,
+      "data": {
+        "id": "c3c80fb6-6143-4ac1-a6f8-c27dec9da32d",
+        "filename": "malicious_2_script.js",
+        "filesize": 129,
+        "filetype": "application/octet-stream",
+        "status": "MALICIOUS",
+        "confidence": 100,
+        "detected_rules": [
+          "JS_Malware_WScriptShell_PowerShellEnc_EvalB64"
+        ],
+        "ai_insight": "Detected by YARA rules: JS_Malware_WScriptShell_PowerShellEnc_EvalB64",
+        "timestamp": "2026-01-19T15:10:16.202366Z"
+      }
+    },
+    {
+      "file": "malicious_3_shell.py",
+      "expected": "MALICIOUS",
+      "success": true,
+      "data": {
+        "id": "bb3c95e6-d334-449b-8fa9-b6b5bfde6135",
+        "filename": "malicious_3_shell.py",
+        "filesize": 52,
+        "filetype": "application/octet-stream",
+        "status": "MALICIOUS",
+        "confidence": 100,
+        "detected_rules": [
+          "malicious_3_shell_python"
+        ],
+        "ai_insight": "Detected by YARA rules: malicious_3_shell_python",
+        "timestamp": "2026-01-19T15:10:16.279432Z"
+      }
+    },
+    {
+      "file": "malicious_4_ransom.txt",
+      "expected": "MALICIOUS",
+      "success": true,
+      "data": {
+        "id": "5e5d062a-418e-419b-a967-dab7c69d28c9",
+        "filename": "malicious_4_ransom.txt",
+        "filesize": 111,
+        "filetype": "application/octet-stream",
+        "status": "MALICIOUS",
+        "confidence": 100,
+        "detected_rules": [
+          "Malicious_Ransom_Note"
+        ],
+        "ai_insight": "Detected by YARA rules: Malicious_Ransom_Note",
+        "timestamp": "2026-01-19T15:10:16.319873Z"
+      }
+    },
+    {
+      "file": "malicious_5_keylogger.txt",
+      "expected": "MALICIOUS",
+      "success": true,
+      "data": {
+        "id": "f8d8bc29-6de6-4dd9-a859-f5fbb48c1809",
+        "filename": "malicious_5_keylogger.txt",
+        "filesize": 72,
+        "filetype": "application/octet-stream",
+        "status": "MALICIOUS",
+        "confidence": 100,
+        "detected_rules": [],
+        "ai_insight": "Gemini Insight: The filename explicitly states \"keylogger,\" and the extracted strings include Windows API calls for process injection (`VirtualAlloc`, `CreateRemoteThread`, `WriteProcessMemory`) and direct keylogging functionality (`GetGetAsyncKeyState`). These elements collectively are definitive indicators of malicious keylogger behavior.",
+        "timestamp": "2026-01-19T15:10:31.299448Z"
+      }
+    },
+    {
+      "file": "benign_1_text.txt",
+      "expected": "SAFE",
+      "success": true,
+      "data": {
+        "id": "3fbfc3b2-af06-4679-aaa4-ff68e5cc6391",
+        "filename": "benign_1_text.txt",
+        "filesize": 85,
+        "filetype": "application/octet-stream",
+        "status": "SAFE",
+        "confidence": 98,
+        "detected_rules": [],
+        "ai_insight": "Gemini Insight (SAFE): The extracted strings explicitly state that the file is \"safe\" and contains \"no threats,\" indicating its benign nature. The small file size and filename are also consistent with a harmless text file.",
+        "timestamp": "2026-01-19T15:10:34.774224Z"
+      }
+    },
+    {
+      "file": "benign_2_code.py",
+      "expected": "SAFE",
+      "success": true,
+      "data": {
+        "id": "be139b04-7dc4-4e05-863e-24b60b3e596b",
+        "filename": "benign_2_code.py",
+        "filesize": 51,
+        "filetype": "application/octet-stream",
+        "status": "SAFE",
+        "confidence": 100,
+        "detected_rules": [],
+        "ai_insight": "Gemini Insight (SAFE): The extracted Python code is a simple, harmless script that defines and calls an addition function. There are no suspicious system calls, network operations, file manipulations, or obfuscation typically associated with malicious software.",
+        "timestamp": "2026-01-19T15:10:43.091147Z"
+      }
+    },
+    {
+      "file": "benign_3_data.csv",
+      "expected": "SAFE",
+      "success": true,
+      "data": {
+        "id": "0244445f-b22d-4d8e-be9d-174c40483f9f",
+        "filename": "benign_3_data.csv",
+        "filesize": 39,
+        "filetype": "application/octet-stream",
+        "status": "SAFE",
+        "confidence": 98,
+        "detected_rules": [],
+        "ai_insight": "Gemini Insight (SAFE): The filename and extracted strings clearly show standard CSV data for a small user list, without any suspicious keywords or obfuscation. The file size is consistent with the shown content, indicating it's a legitimate data file.",
+        "timestamp": "2026-01-19T15:10:46.348404Z"
+      }
+    },
+    {
+      "file": "benign_4_config.json",
+      "expected": "SAFE",
+      "success": true,
+      "data": {
+        "id": "155f513c-ee2c-4a23-b4a4-e305e9ae524c",
+        "filename": "benign_4_config.json",
+        "filesize": 77,
+        "filetype": "application/octet-stream",
+        "status": "SAFE",
+        "confidence": 95,
+        "detected_rules": [],
+        "ai_insight": "Gemini Insight (SAFE): The filename `config.json` and its contents, which consist of typical application settings like `theme` and `notifications`, strongly indicate it's a harmless configuration file. Its very small size (77 bytes) and the absence of any suspicious strings or obfuscation further support its benign nature.",
+        "timestamp": "2026-01-19T15:10:50.942579Z"
+      }
+    },
+    {
+      "file": "benign_5_web.html",
+      "expected": "SAFE",
+      "success": true,
+      "data": {
+        "id": "b8e623ae-e098-4098-a3f1-3350a95175e1",
+        "filename": "benign_5_web.html",
+        "filesize": 100,
+        "filetype": "application/octet-stream",
+        "status": "SAFE",
+        "confidence": 0,
+        "detected_rules": [],
+        "ai_insight": "Gemini Insight (SAFE): Analysis failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 5, model: gemini-2.5-flash\\nPlease retry in 8.965493967s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-2.5-flash', 'location': 'global'}, 'quotaValue': '5'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '8s'}]}}",
+        "timestamp": "2026-01-19T15:10:51.074912Z"
+      }
+    }
+  ],
+  "rules_tests": [
+    {
+      "endpoint": "GET /api/rules",
+      "success": true,
+      "rules_count": 4
+    }
+  ],
+  "sync_tests": [
+    {
+      "endpoint": "POST /api/sync-rules (all sources)",
+      "success": true,
+      "response": {
+        "message": "Rule sync started for ['github', 'otx', 'malwarebazaar']"
+      }
+    },
+    {
+      "endpoint": "POST /api/sync-rules (github)",
+      "success": true,
+      "response": {
+        "message": "Rule sync started for ['github']"
+      }
+    },
+    {
+      "endpoint": "POST /api/sync-rules (malwarebazaar)",
+      "success": true,
+      "response": {
+        "message": "Rule sync started for ['malwarebazaar']"
+      }
+    },
+    {
+      "endpoint": "POST /api/sync-rules (otx)",
+      "success": true,
+      "response": {
+        "message": "Rule sync started for ['otx']"
+      }
+    }
+  ],
+  "stats_tests": [
+    {
+      "endpoint": "GET /api/stats",
+      "success": true,
+      "data": {
+        "total_scans": 42,
+        "malicious_detected": 11,
+        "active_rules": 10
+      }
+    }
+  ],
+  "commercial_tests": {
+    "sources_found": [
+      "Gemini-AI",
+      "Yara-Rules-Repo"
+    ],
+    "malwarebazaar_count": 0,
+    "github_count": 0,
+    "otx_count": 0,
+    "missing_sources": [
+      "MalwareBazaar",
+      "GitHub-Community",
+      "AlienVault-OTX"
+    ]
+  },
+  "feed_service_tests": []
+}

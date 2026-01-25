@@ -1,0 +1,224 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* Light Mode Variables */
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
+
+        /* Primary - Deep Teal for Light Mode */
+        --primary: 180 100% 25%;
+        --primary-foreground: 210 40% 98%;
+        --primary-glow: 180 70% 40%;
+
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
+
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+
+        --accent: 210 40% 96.1%;
+        --accent-foreground: 222.2 47.4% 11.2%;
+
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40% 98%;
+        --destructive-glow: 0 100% 80%;
+
+        --success: 150 70% 35%;
+        --success-foreground: 0 0% 98%;
+        --success-glow: 150 70% 80%;
+
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 180 100% 25%;
+
+        --radius: 0.5rem;
+
+        /* Custom tokens */
+        --terminal-bg: 220 13% 95%;
+        --terminal-green: 150 100% 30%;
+        --scan-line: 180 100% 30%;
+        --grid-line: 220 13% 90%;
+    }
+
+    .dark {
+        /* Cybersecurity Dark Mode Design Tokens */
+        --background: 220 13% 9%;
+        --foreground: 180 5% 85%;
+
+        /* Neon Teal/Cyan for primary actions */
+        --primary: 180 100% 50%;
+        --primary-foreground: 220 13% 9%;
+        --primary-glow: 180 100% 60%;
+
+        /* Threat Red */
+        --destructive: 0 100% 55%;
+        --destructive-foreground: 0 0% 98%;
+        --destructive-glow: 0 100% 45%;
+
+        /* Success Green */
+        --success: 150 70% 45%;
+        --success-foreground: 0 0% 98%;
+        --success-glow: 150 100% 40%;
+
+        /* Secondary/Accent */
+        --secondary: 220 13% 18%;
+        --secondary-foreground: 180 5% 85%;
+        --accent: 270 70% 60%;
+        --accent-foreground: 0 0% 98%;
+
+        /* Surface colors */
+        --card: 220 13% 13%;
+        --card-foreground: 180 5% 85%;
+        --popover: 220 13% 13%;
+        --popover-foreground: 180 5% 85%;
+
+        /* Muted/Subtle */
+        --muted: 220 13% 20%;
+        --muted-foreground: 180 5% 55%;
+
+        /* Borders and inputs */
+        --border: 180 20% 25%;
+        --input: 220 13% 18%;
+        --ring: 180 100% 50%;
+
+        /* Custom tokens */
+        --terminal-bg: 220 13% 9%;
+        --terminal-green: 150 100% 50%;
+        --scan-line: 180 100% 50%;
+        --grid-line: 180 20% 20%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-family: 'Space Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+}
+
+/* Terminal Font Import */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@400;500;600;700;900&display=swap');
+
+/* Custom animations */
+@keyframes scan-line {
+    0% {
+        transform: translateY(-100%);
+    }
+
+    100% {
+        transform: translateY(100vh);
+    }
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        opacity: 1;
+        filter: drop-shadow(0 0 8px currentColor);
+    }
+
+    50% {
+        opacity: 0.6;
+        filter: drop-shadow(0 0 20px currentColor);
+    }
+}
+
+@keyframes terminal-blink {
+
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    51%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-scan-line {
+    animation: scan-line 8s linear infinite;
+}
+
+.animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-terminal-blink {
+    animation: terminal-blink 1s step-end infinite;
+}
+
+.animate-slide-up {
+    animation: slide-up 0.5s ease-out forwards;
+}
+
+/* Grid background effect */
+.cyber-grid {
+    background-image:
+        linear-gradient(hsl(var(--grid-line)) 1px, transparent 1px),
+        linear-gradient(90deg, hsl(var(--grid-line)) 1px, transparent 1px);
+    background-size: 50px 50px;
+}
+
+/* Glow effects */
+.glow-cyan {
+    box-shadow: 0 0 20px hsl(var(--primary-glow) / 0.3);
+}
+
+.glow-red {
+    box-shadow: 0 0 20px hsl(var(--destructive-glow) / 0.4);
+}
+
+.glow-green {
+    box-shadow: 0 0 20px hsl(var(--success-glow) / 0.3);
+}
+
+/* Terminal text effect */
+.terminal-text {
+    font-family: 'Space Mono', monospace;
+    text-shadow: 0 0 5px currentColor;
+}
+
+/* Scanline overlay */
+.scanline-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(to bottom, hsl(var(--scan-line)), transparent);
+    animation: scan-line 8s linear infinite;
+    pointer-events: none;
+    z-index: 50;
+}
+
+@layer base {
+    [data-debug-wrapper="true"] {
+        display: contents !important;
+    }
+}
