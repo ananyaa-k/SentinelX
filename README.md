@@ -1,10 +1,6 @@
 # SentinelX: GenAI-Powered Malware Analysis Engine 🛡️
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 2feda33fc863fc7365816016f02e87cb8b135a7e
-**SentinelX** is a next-generation malware sandbox that bridges the gap between static signature matching and heuristic behavioral profiling. Unlike traditional sandboxes, SentinelX uses a **Hybrid Detection Engine** combining industry-standard **YARA** scanning with an **LLM Agent (Gemini 2.5 Flash)** to interpret file anomalies and *autonomously synthesize* new YARA rules for zero-day threats.
+**SentinelX** is a next-generation malware sandbox that bridges the gap between static signature matching and heuristic behavioral profiling. Unlike traditional sandboxes, SentinelX uses a **Hybrid Detection Engine** combining industry-standard **YARA** scanning with an **LLM Agent (Gemini 2.5 Flash)** to interpret file anomalies and *autonomously synthesize* new YARA rules for threats.
 
 ## 🏗️ Architecture 
 
@@ -76,7 +72,3 @@
     ```
 
 *This project is currently under active development for 2026 Security Research.*
-<<<<<<< HEAD
-=======
-
->>>>>>> 2feda33fc863fc7365816016f02e87cb8b135a7e
