@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Shield, AlertTriangle, CheckCircle2, Loader2, Brain, FileText, Hash, Download } from 'lucide-react';
+import { Upload, Shield, AlertTriangle, CheckCircle2, Loader2, Brain, FileText, Hash, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -32,7 +32,7 @@ export const CommandCenterPage = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFile(e.dataTransfer.files[0]);
     }
@@ -54,57 +54,107 @@ export const CommandCenterPage = () => {
     setScanning(true);
     setProgress(0);
     setResult(null);
-    
-    setScanStage('Uploading & Pre-processing...');
-    setProgress(20);
+
+    setScanStage('Uploading...');
+    setProgress(10);
 
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const progressInterval = setInterval(() => {
-        setProgress(prev => Math.min(prev + 5, 80));
-      }, 500);
-
-      setScanStage('YARA Scanning & Gemini AI Analysis...');
-
       const backendUrl = process.env.REACT_APP_BACKEND_URL;
-      const response = await axios.post(`${backendUrl}/api/scan`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+
+      const response = await fetch(`${backendUrl}/api/scan`, {
+        method: 'POST',
+        headers: {},
+        body: formData,
       });
 
-      clearInterval(progressInterval);
-      setProgress(100);
-      setScanStage('Finalizing Report...');
-      
-      const data = response.data;
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status} ${response.statusText}`);
+      }
 
-      setResult({
-        status: data.status,
-        confidence: data.confidence,
-        detectedStrings: data.detected_rules || [],
-        fileName: data.filename,
-        fileSize: data.filesize,
-        fileType: data.filetype,
-        analysisTime: Date.now(),
-        aiInsight: data.ai_insight,
-      });
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
 
-      if (data.status === 'MALICIOUS') {
-        toast.error(`Threat Detected: ${data.filename}`);
+      let finalData = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.substring(6).trim();
+            if (!dataStr) continue;
+
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.error) {
+                throw new Error(data.error);
+              }
+              if (data.stage) setScanStage(data.stage);
+              if (data.progress) setProgress(data.progress);
+              if (data.result) {
+                finalData = data.result;
+              }
+            } catch (e) {
+              if (e.message !== 'Unexpected end of JSON input') {
+                console.error('JSON parse error:', e, dataStr);
+              }
+            }
+          }
+        }
+      }
+
+      if (finalData) {
+        setResult({
+          scanId: finalData.id,
+          status: finalData.status,
+          confidence: finalData.confidence,
+          detectedStrings: finalData.detected_rules || [],
+          fileName: finalData.filename,
+          fileSize: finalData.filesize,
+          fileType: finalData.filetype,
+          analysisTime: Date.now(),
+          aiInsight: finalData.ai_insight,
+        });
+
+        if (finalData.status === 'MALICIOUS') {
+          toast.error(`Threat Detected: ${finalData.filename}`);
+        } else {
+          toast.success(`Scan Complete: File appears safe.`);
+        }
       } else {
-        toast.success(`Scan Complete: File appears safe.`);
+        throw new Error("No result returned from stream.");
       }
 
     } catch (error) {
       console.error("Scan failed", error);
-      toast.error("Scan failed: " + (error.response?.data?.detail || error.message));
+      toast.error("Scan failed: " + error.message);
       setResult(null);
     } finally {
       setScanning(false);
       setScanStage('');
+    }
+  };
+
+  const submitFeedback = async (decision) => {
+    try {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL;
+      await axios.post(`${backendUrl}/api/scan/feedback`, {
+        scan_id: result.scanId || 'unknown',
+        filename: result.fileName,
+        analyst_decision: decision,
+        notes: ''
+      });
+      toast.success('Feedback recorded. Gemini agent will learn from this in future scans.');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to submit feedback.');
     }
   };
 
@@ -128,11 +178,10 @@ export const CommandCenterPage = () => {
               </CardHeader>
               <CardContent>
                 <div
-                  className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-all duration-300 ${
-                    dragActive
+                  className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-all duration-300 ${dragActive
                       ? 'border-primary bg-primary/10 glow-cyan'
                       : 'border-border hover:border-primary/50'
-                  }`}
+                    }`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
@@ -144,7 +193,7 @@ export const CommandCenterPage = () => {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     accept="*/*"
                   />
-                  
+
                   <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-foreground font-semibold mb-2">Drop files here</p>
                   <p className="text-sm text-muted-foreground">or click to browse</p>
@@ -293,6 +342,18 @@ export const CommandCenterPage = () => {
                       <ThreatChart confidence={result.confidence} isMalicious={result.status === 'MALICIOUS'} />
                     </CardContent>
                   </Card>
+
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4 pt-4 border-t border-border">
+                    <span className="text-sm text-muted-foreground mr-auto self-center">Help the AI agent learn by providing feedback.</span>
+                    <Button variant="outline" size="sm" onClick={() => submitFeedback('FALSE_POSITIVE')}>
+                      <ThumbsDown className="w-4 h-4 mr-2" />
+                      Mark False Positive
+                    </Button>
+                    <Button variant="default" size="sm" onClick={() => submitFeedback('TRUE_POSITIVE')}>
+                      <ThumbsUp className="w-4 h-4 mr-2" />
+                      Confirm Threat
+                    </Button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

@@ -28,5 +28,14 @@ class ScanResult(BaseModel):
     ai_insight: str = ""
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class ScanFeedback(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    scan_id: str
+    filename: str
+    analyst_decision: str  # "FALSE_POSITIVE" or "TRUE_POSITIVE"
+    notes: Optional[str] = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class SyncRequest(BaseModel):
     sources: List[str] = ["github", "otx", "malwarebazaar"]

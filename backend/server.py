@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, UploadFile, File, BackgroundTasks, HTTPException
+from fastapi import FastAPI, APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Body
+from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -15,7 +16,8 @@ from services.yara_service import YaraService
 from services.gemini_service import GeminiService
 from services.feed_service import FeedService
 from utils.scheduler import start_scheduler
-from models import ScanResult, YaraRule, SyncRequest
+from models import ScanResult, YaraRule, SyncRequest, ScanFeedback
+import json
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -81,88 +83,125 @@ async def sync_feeds_task(sources: List[str] = ["github", "otx", "malwarebazaar"
 async def root():
     return {"message": "SentinelX API Online"}
 
-@api_router.post("/scan", response_model=ScanResult)
+@api_router.post("/scan")
 async def scan_file(file: UploadFile = File(...)):
     """
-    Scans an uploaded file using YARA and Gemini AI.
+    Scans an uploaded file using YARA and Gemini AI (Streaming).
     """
     try:
         content = await file.read()
-        
-        # 1. YARA Scan
-        matches = yara_service.scan_data(content)
-        
-        status = "SAFE"
-        confidence = 0
-        ai_insight = "Clean file. No YARA matches found."
-        
-        if matches:
-            status = "MALICIOUS"
-            confidence = 100
-            ai_insight = f"Detected by YARA rules: {', '.join(matches)}"
-        else:
-            # 2. AI Analysis (if no match)
-            is_malicious, reason, ai_conf = await gemini_service.analyze_file(
-                filename=file.filename,
-                data=content,
-                mime_type=file.content_type or "application/octet-stream"
-            )
+    except Exception as e:
+        logger.error(f"Failed to read file: {e}")
+        raise HTTPException(status_code=400, detail="Invalid file")
+
+    filename = file.filename
+    content_type = file.content_type or "application/octet-stream"
+    filesize = len(content)
+
+    async def event_generator():
+        try:
+            # 1. YARA Scan Stage
+            yield f"data: {json.dumps({'stage': 'YARA Scanning', 'progress': 20})}\n\n"
             
-            if is_malicious:
+            matches = yara_service.scan_data(content)
+            
+            status = "SAFE"
+            confidence = 0
+            ai_insight = "Clean file. No YARA matches found."
+            
+            if matches:
                 status = "MALICIOUS"
-                confidence = ai_conf
-                ai_insight = f"Gemini Insight: {reason}"
+                confidence = 100
+                ai_insight = f"Detected by YARA rules: {', '.join(matches)}"
+                yield f"data: {json.dumps({'stage': 'Threat Detected by YARA', 'progress': 100})}\n\n"
+            else:
+                # 2. AI Analysis Stage
+                yield f"data: {json.dumps({'stage': 'Gemini AI Analysis', 'progress': 50})}\n\n"
                 
-                # 3. Generate Rule (if malicious and not detected)
-                rule_content = await gemini_service.generate_yara_rule(
-                    filename=file.filename,
+                # Fetch recent feedback for context
+                recent_feedback_cursor = db.feedback.find({}).sort("timestamp", -1).limit(5)
+                recent_feedback = await recent_feedback_cursor.to_list(length=5)
+                
+                is_malicious, reason, ai_conf = await gemini_service.analyze_file(
+                    filename=filename,
                     data=content,
-                    reason=reason
+                    mime_type=content_type,
+                    feedback_context=recent_feedback
                 )
                 
-                if rule_content:
-                    rule_name = f"auto_gen_{uuid.uuid4().hex[:8]}"
-                    # Save rule
-                    yara_service.save_rule(rule_content, f"{rule_name}.yar")
+                if is_malicious:
+                    status = "MALICIOUS"
+                    confidence = ai_conf
+                    ai_insight = f"Gemini Insight: {reason}"
                     
-                    # Persist Rule to DB
-                    new_rule = YaraRule(
-                        rule_id=rule_name,
-                        name=f"Auto-Generated: {file.filename}",
-                        family="AI-Detected",
-                        severity="High",
-                        content=rule_content,
-                        source="Gemini-AI"
+                    # 3. Generate Rule Stage
+                    yield f"data: {json.dumps({'stage': 'Generating YARA Rule', 'progress': 80})}\n\n"
+                    rule_content = await gemini_service.generate_yara_rule(
+                        filename=filename,
+                        data=content,
+                        reason=reason
                     )
-                    doc = new_rule.model_dump()
-                    doc['date_added'] = doc['date_added'].isoformat()
-                    await db.rules.insert_one(doc)
                     
-                    ai_insight += " [New YARA Rule Generated]"
-            else:
-                status = "SAFE"
-                confidence = ai_conf  # usually low for safe
-                ai_insight = f"Gemini Insight (SAFE): {reason}"
+                    if rule_content:
+                        rule_name = f"auto_gen_{uuid.uuid4().hex[:8]}"
+                        yara_service.save_rule(rule_content, f"{rule_name}.yar")
+                        
+                        new_rule = YaraRule(
+                            rule_id=rule_name,
+                            name=f"Auto-Generated: {filename}",
+                            family="AI-Detected",
+                            severity="High",
+                            content=rule_content,
+                            source="Gemini-AI"
+                        )
+                        doc = new_rule.model_dump()
+                        doc['date_added'] = doc['date_added'].isoformat()
+                        await db.rules.insert_one(doc)
+                        
+                        ai_insight += " [New YARA Rule Generated]"
+                else:
+                    status = "SAFE"
+                    confidence = ai_conf  # usually low for safe
+                    ai_insight = f"Gemini Insight (SAFE): {reason}"
 
-        # Create Result
-        result = ScanResult(
-            filename=file.filename,
-            filesize=len(content),
-            filetype=file.content_type or "unknown",
-            status=status,
-            confidence=confidence,
-            detected_rules=matches,
-            ai_insight=ai_insight
-        )
-        
-        # Save to DB
-        await save_scan_result(result)
-        
-        return result
+            yield f"data: {json.dumps({'stage': 'Finalizing Report', 'progress': 95})}\n\n"
 
+            result = ScanResult(
+                filename=filename,
+                filesize=filesize,
+                filetype=content_type,
+                status=status,
+                confidence=confidence,
+                detected_rules=matches,
+                ai_insight=ai_insight
+            )
+            
+            await save_scan_result(result)
+            
+            # Use model_dump(mode='json') or convert datetime so JSON dumps works.
+            # Convert timestamp to string before returning dict.
+            res_dict = result.model_dump()
+            res_dict['timestamp'] = res_dict['timestamp'].isoformat()
+            
+            yield f"data: {json.dumps({'stage': 'Complete', 'progress': 100, 'result': res_dict})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Scan stream failed: {e}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@api_router.post("/scan/feedback")
+async def submit_feedback(feedback: ScanFeedback):
+    """Saves analyst feedback for agent learning."""
+    try:
+        doc = feedback.model_dump()
+        doc['timestamp'] = doc['timestamp'].isoformat()
+        await db.feedback.insert_one(doc)
+        return {"message": "Feedback recorded successfully."}
     except Exception as e:
-        logger.error(f"Scan failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Feedback submission failed: {e}")
+        raise HTTPException(status_code=500, detail="Could not save feedback")
 
 @api_router.get("/rules", response_model=List[YaraRule])
 async def get_rules():

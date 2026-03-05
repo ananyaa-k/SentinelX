@@ -3,6 +3,7 @@ import os
 import logging
 from typing import Tuple, Optional
 import re
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class GeminiService:
         except Exception:
             return ""
 
-    async def analyze_file(self, filename: str, data: bytes, mime_type: str) -> Tuple[bool, str, int]:
+    async def analyze_file(self, filename: str, data: bytes, mime_type: str, feedback_context: list = None) -> Tuple[bool, str, int]:
         """
         Analyzes file metadata and strings to determine if malicious.
         Returns: (is_malicious, insight_text, confidence_score)
@@ -40,8 +41,18 @@ class GeminiService:
 
         strings_preview = self._extract_strings(data)
         
+        feedback_str = ""
+        if feedback_context:
+            feedback_str = "\nLearnings from previous Analyst Feedback (CRITICAL - DO NOT REPEAT FALSE POSITIVES):\n"
+            for fb in feedback_context:
+                feedback_str += f"- File '{fb.get('filename','unknown')}': Analyst marked as {fb.get('analyst_decision')}."
+                if fb.get('notes'):
+                    feedback_str += f" Notes: {fb.get('notes')}"
+                feedback_str += "\n"
+
         prompt = f"""
-        You are a malware analysis expert. Analyze the following file metadata and extracted strings.
+        You are an expert malware reverse-engineer. Analyze the provided file metadata and extracted strings.
+        {feedback_str}
         
         Filename: {filename}
         Type: {mime_type}
@@ -51,33 +62,33 @@ class GeminiService:
         {strings_preview[:4000]} 
         
         Task:
-        1. Determine if this file is likely MALICIOUS or SAFE.
-        2. Provide a confidence score (0-100).
-        3. Explain your reasoning in 2 sentences.
+        1. First, reason step-by-step about the file based on the extracted strings and metadata. Are there obvious malicious indicators?
+        2. Be extremely careful to avoid false positives. If the strings look like a standard library, plain text file, or benign application without explicit malicious intent, you MUST classify it as SAFE.
+        3. After reasoning, determine the final status (MALICIOUS or SAFE) and provide a confidence score (0-100).
         
-        Output Format:
-        STATUS: [MALICIOUS/SAFE]
+        Strict Output Format (Follow exactly):
+        REASON: [Write your step-by-step analysis here]
+        STATUS: [MALICIOUS or SAFE]
         CONFIDENCE: [0-100]
-        REASON: [Your explanation]
         """
 
         try:
-            # Note: The new SDK client is synchronous by default unless using async client.
-            # But here we are in an async function.
-            # For simplicity with google-genai 1.0+, we can use the sync call or look for async.
-            # Most examples show sync calls. We can wrap it or just use it (it's fast enough for this MVP).
-            # Or better, use `from google.genai import Client` which supports async via `aio`.
-            # Let's check if the client has aio property or async methods. 
-            # The output of web search didn't explicitly mention async.
-            # I will use the standard sync call for now, as it's safer than guessing async method names.
-            
-            response = self.client.models.generate_content(
+            # Use asyncio.to_thread to prevent blocking the async event loop, set temperature 0 to make it deterministic
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=self.model_name,
-                contents=prompt
+                contents=prompt,
+                config={"temperature": 0.0}
             )
             
             text = response.text
             
+            # Parse reason first
+            reason = "No explanation provided."
+            reason_match = re.search(r"REASON:\s*(.*?)(?=\nSTATUS:|\nCONFIDENCE:|$)", text, re.IGNORECASE | re.DOTALL)
+            if reason_match:
+                reason = reason_match.group(1).strip()
+
             is_malicious = "STATUS: MALICIOUS" in text.upper()
             
             # Parse confidence
@@ -85,12 +96,6 @@ class GeminiService:
             conf_match = re.search(r"CONFIDENCE:\s*(\d+)", text, re.IGNORECASE)
             if conf_match:
                 confidence = int(conf_match.group(1))
-            
-            # Parse reason
-            reason = "No explanation provided."
-            reason_match = re.search(r"REASON:\s*(.*)", text, re.IGNORECASE | re.DOTALL)
-            if reason_match:
-                reason = reason_match.group(1).strip()
 
             return is_malicious, reason, confidence
 
@@ -120,9 +125,11 @@ class GeminiService:
         """
 
         try:
-            response = self.client.models.generate_content(
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=self.model_name,
-                contents=prompt
+                contents=prompt,
+                config={"temperature": 0.1}
             )
             rule_content = response.text.strip()
             # Cleanup markdown code blocks if present

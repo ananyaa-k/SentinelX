@@ -11,8 +11,8 @@ from pathlib import Path
 import time
 
 # Configuration
-BACKEND_URL = "https://malware-sandbox-7.preview.emergentagent.com/api"
-SAMPLES_DIR = "/app/backend/tests/samples"
+BACKEND_URL = "http://localhost:8000/api"
+SAMPLES_DIR = "./backend/tests/samples"
 
 class SentinelXTester:
     def __init__(self):
@@ -51,10 +51,26 @@ class SentinelXTester:
         try:
             with open(file_path, 'rb') as f:
                 files = {'file': (file_name, f, 'application/octet-stream')}
-                response = requests.post(f"{self.backend_url}/scan", files=files, timeout=30)
+                response = requests.post(f"{self.backend_url}/scan", files=files, stream=True, timeout=60)
             
             if response.status_code == 200:
-                data = response.json()
+                final_data = None
+                for line in response.iter_lines():
+                    if line:
+                        decoded_line = line.decode('utf-8')
+                        if decoded_line.startswith('data: '):
+                            chunk_data = json.loads(decoded_line[6:])
+                            if 'error' in chunk_data:
+                                print(f"❌ Stream error: {chunk_data['error']}")
+                                return False, None
+                            if 'result' in chunk_data:
+                                final_data = chunk_data['result']
+
+                if not final_data:
+                    print(f"❌ No final result found in stream")
+                    return False, None
+                
+                data = final_data
                 
                 # Validate response structure
                 required_fields = ['filename', 'filesize', 'filetype', 'status', 'confidence', 'ai_insight']
@@ -92,7 +108,6 @@ class SentinelXTester:
                 
             else:
                 print(f"❌ Scan failed for {file_name}: {response.status_code}")
-                print(f"   Response: {response.text}")
                 return False, None
                 
         except Exception as e:
@@ -515,10 +530,10 @@ def main():
     success = tester.run_all_tests()
     
     # Save detailed results
-    with open("/app/backend_test_results.json", "w") as f:
+    with open("./backend_test_results.json", "w") as f:
         json.dump(tester.results, f, indent=2, default=str)
     
-    print(f"\n📄 Detailed results saved to: /app/backend_test_results.json")
+    print(f"\n📄 Detailed results saved to: ./backend_test_results.json")
     
     return 0 if success else 1
 

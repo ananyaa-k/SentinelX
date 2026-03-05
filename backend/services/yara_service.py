@@ -29,13 +29,33 @@ class YaraService:
         yara_files = {os.path.splitext(os.path.basename(f))[0]: f for f in filepaths}
         
         try:
+            # First try compiling all together for efficiency
             self.rules = yara.compile(filepaths=yara_files)
             logger.info(f"Successfully compiled {len(yara_files)} rule files.")
         except yara.SyntaxError as e:
-            logger.error(f"YARA compilation error: {e}")
-            # Try to compile valid ones one by one to avoid total failure? 
-            # For now, just log and skip.
-            self.rules = None
+            logger.error(f"YARA bulk compilation error: {e}. Falling back to individual compilation.")
+            valid_files = {}
+            for name, path in yara_files.items():
+                try:
+                    yara.compile(filepath=path)
+                    valid_files[name] = path
+                except yara.SyntaxError as sub_e:
+                    logger.warning(f"Skipping bad YARA rule {name}: {sub_e}")
+                    # Auto-quarantine the bad rule
+                    try:
+                        os.rename(path, path + ".bad")
+                    except Exception:
+                        pass
+            
+            if valid_files:
+                try:
+                    self.rules = yara.compile(filepaths=valid_files)
+                    logger.info(f"Successfully compiled {len(valid_files)} valid rule files.")
+                except Exception as final_e:
+                    logger.error(f"Final fallback compilation failed: {final_e}")
+                    self.rules = None
+            else:
+                self.rules = None
         except Exception as e:
             logger.error(f"Unexpected error compiling rules: {e}")
             self.rules = None
